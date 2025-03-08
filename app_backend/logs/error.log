@@ -1,0 +1,14 @@
+2025-03-08 14:57:11:5711 [31merror[39m: [31mError sending verification email: ENOENT: no such file or directory, open 'D:\Dubai Portfolio\complete_auth_next_express\app_backend\src\views\verify-email.hbs'[39m
+2025-03-08 14:58:55:5855 [31merror[39m: [31mError sending verification email: The partial header could not be found[39m
+2025-03-08 15:11:02:112 [31merror[39m: [31mError sending verification email: registerPartials is not defined[39m
+2025-03-08 15:11:44:1144 [31merror[39m: [31mError sending verification email: The partial header could not be found[39m
+2025-03-08 15:13:57:1357 [31merror[39m: [31mError sending verification email: ENOENT: no such file or directory, open 'D:\Dubai Portfolio\complete_auth_next_express\app_backend\src\templates\verify-email.hbs'[39m
+2025-03-08 15:19:27:1927 [31merror[39m: [31mError sending verification email: Greeting never received[39m
+2025-03-08 15:22:40:2240 [31merror[39m: [31mError sending verification email: Greeting never received[39m
+2025-03-08 15:27:43:2743 [31merror[39m: [31mError sending verification email: Greeting never received[39m
+2025-03-08 15:28:42:2842 [31merror[39m: [31mError sending verification email: getaddrinfo ENOTFOUND mailhog[39m
+2025-03-08 15:32:09:329 [31merror[39m: [31mError sending verification email: getaddrinfo ENOTFOUND mailhog[39m
+2025-03-08 15:36:29:3629 [31merror[39m: [31mError sending verification email: Greeting never received[39m
+2025-03-08 15:37:53:3753 [31merror[39m: [31mError sending verification email: getaddrinfo ENOTFOUND mailhog[39m
+2025-03-08 15:45:03:453 [31merror[39m: [31mError sending verification email: Greeting never received[39m
+2025-03-08 15:48:21:4821 [31merror[39m: [31mError sending verification email: Greeting never received[39m

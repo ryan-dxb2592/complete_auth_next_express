@@ -1,0 +1,25 @@
+{{> header subtitle="Two-Factor Authentication Code"}}
+
+<div class="content">
+    <p>Hello {{name}},</p>
+    
+    <p>You've requested to sign in to your Complete Authentication System account. For your security, we require two-factor authentication.</p>
+    
+    <div style="text-align: center; margin: 2rem 0; padding: 1.5rem; background-color: #f3f4f6; border-radius: 6px;">
+        <p style="margin: 0 0 0.5rem; font-size: 0.875rem; color: #6b7280;">Your verification code is:</p>
+        <p style="margin: 0; font-size: 2rem; letter-spacing: 0.25rem; font-weight: bold; color: #2563eb;">{{code}}</p>
+    </div>
+
+    <p>This code will expire in {{expiryTime}} minutes. If you need a new code after that, you'll need to request another one.</p>
+
+    <p><strong>Security Notice:</strong> If you didn't attempt to sign in, someone else might be trying to access your account. Please:</p>
+    <ul>
+        <li>Change your password immediately</li>
+        <li>Review your account activity</li>
+        <li>Contact our support team</li>
+    </ul>
+
+    <p>Best regards,<br>The Complete Authentication Team</p>
+</div>
+
+{{> footer showSupport=true}} 

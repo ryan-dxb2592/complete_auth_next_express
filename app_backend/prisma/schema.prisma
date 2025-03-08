@@ -1,0 +1,137 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TwoFactorType {
+  LOGIN
+  PASSWORD_CHANGE
+}
+
+model User {
+  id         String    @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String    @unique
+  password   String
+  isVerified Boolean   @default(false)
+  isActive   Boolean   @default(true)
+  isDeleted  Boolean   @default(false)
+  isBanned   Boolean   @default(false)
+  profile    Profile?
+  roles      Role[]    @default([USER])
+  sessions   Session[]
+
+  // New relations for verification tables
+  emailVerification  EmailVerification?
+  passwordReset      PasswordReset?
+  isTwoFactorEnabled Boolean            @default(false)
+  twoFactorTokens    TwoFactorToken[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@map("users")
+}
+
+model Profile {
+  id          String   @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName   String?
+  lastName    String?
+  bio         String?
+  avatar      String? // URL to avatar image
+  phoneNumber String?
+  address     String?
+  userId      String   @unique @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("profiles")
+}
+
+model Session {
+  id           String        @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String        @db.Uuid
+  expires      DateTime
+  ipAddress    String
+  userAgent    String
+  deviceType   String?
+  deviceName   String?
+  browser      String?
+  os           String?
+  lastUsed     DateTime      @default(now()) @map("last_used")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken RefreshToken?
+
+  @@index([userId])
+}
+
+model EmailVerification {
+  id        String   @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @unique @db.Uuid
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("email_verifications")
+}
+
+model PasswordReset {
+  id        String   @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @unique @db.Uuid
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("password_resets")
+}
+
+model RefreshToken {
+  id        String   @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String   @unique @db.Uuid
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([sessionId])
+  @@map("refresh_tokens")
+}
+
+model TwoFactorToken {
+  id        String        @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type      TwoFactorType
+  code      String
+  userId    String        @db.Uuid
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  used      Boolean       @default(false)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@unique([userId, type, code])
+  @@index([userId, type, used, expiresAt])
+  @@map("two_factor_tokens")
+}
