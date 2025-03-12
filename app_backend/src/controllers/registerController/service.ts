@@ -1,20 +1,22 @@
 import bcrypt from "bcryptjs";
 import prisma from "@/utils/db";
-import { RegisterUserInput, RegisterResponse } from "./schema";
+import { RegisterUserInput, RegisterServiceResponse } from "./schema";
 import { findUserByEmail } from "@/helpers/dbCalls/users";
 import { generateVerificationToken } from "@/services/token.service";
 import { sendVerificationEmail } from "@/services/email.service";
+import { AppError } from "@/utils/error";
+import { HTTP_STATUS } from "@/constants";
 
 export const registerUserService = async (
   data: RegisterUserInput
-): Promise<RegisterResponse> => {
+): Promise<RegisterServiceResponse> => {
   const { email, password } = data;
 
   // Check if user already exists
   const existingUser = await findUserByEmail(email);
 
   if (existingUser) {
-    throw new Error("User already exists");
+    throw new AppError("User already exists", HTTP_STATUS.BAD_REQUEST);
   }
 
   // Hash password

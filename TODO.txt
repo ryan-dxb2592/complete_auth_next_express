@@ -1,0 +1,4 @@
+- Add a onboardingComplete field in the user table. 
+- Forgot and reset password should be a single page. 
+- Use x-<mobile> to check and verify its a mobile login and send access and refresh tokens accordingly
+- For permissions. we can use <role>:<resource>:<action>

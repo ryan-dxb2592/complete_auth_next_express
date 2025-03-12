@@ -16,3 +16,13 @@ export const HTTP_STATUS = {
 
 export const PORT: string = process.env.PORT || "3000";
 export const DATABASE_URL: string = process.env.DATABASE_URL || "";
+
+// Token Constants
+export const JWT_ACCESS_TOKEN_SECRET: string =
+  process.env.JWT_ACCESS_TOKEN_SECRET || "";
+export const JWT_REFRESH_TOKEN_SECRET: string =
+  process.env.JWT_REFRESH_TOKEN_SECRET || "";
+export const JWT_ACCESS_TOKEN_EXPIRATION =
+  process.env.JWT_ACCESS_TOKEN_EXPIRATION || "15m";
+export const JWT_REFRESH_TOKEN_EXPIRATION =
+  process.env.JWT_REFRESH_TOKEN_EXPIRATION || "7d";

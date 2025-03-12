@@ -7,6 +7,7 @@ import compression from "compression";
 import { engine } from "express-handlebars";
 import path from "path";
 import indexRouter from "@/routes";
+import { errorHandler } from "./middlewares/errorHandler";
 
 const app: Express = express();
 
@@ -23,7 +24,7 @@ app.set("view engine", "hbs");
 app.set("views", path.join(__dirname, "views"));
 
 app.use(helmet());
-app.use(cors());
+app.use(cors({ credentials: true }));
 app.use(morgan("dev"));
 app.use(cookieParser());
 app.use(compression());
@@ -43,5 +44,7 @@ app.get("/", (_req, res) => {
 
 // Routes
 app.use("/api/v1", indexRouter);
+
+app.use(errorHandler);
 
 export default app;

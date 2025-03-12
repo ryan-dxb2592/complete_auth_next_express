@@ -23,10 +23,10 @@ export const registerUserSchema = z.object({
 
 export type RegisterUserInput = z.infer<typeof registerUserSchema>["body"];
 
-export type RegisterResponse = {
+export type RegisterServiceResponse = {
   id: string;
   email: string;
   createdAt: Date;
 };
 
-export type RegisterUserResponse = ApiResponse<RegisterResponse>;
+export type RegisterUserResponse = ApiResponse<RegisterServiceResponse>;

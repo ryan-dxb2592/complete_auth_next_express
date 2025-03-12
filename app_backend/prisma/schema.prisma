@@ -14,8 +14,8 @@ datasource db {
 }
 
 enum Role {
-  USER
-  ADMIN
+  USER  @map("user")
+  ADMIN @map("admin")
 }
 
 enum TwoFactorType {
@@ -24,16 +24,20 @@ enum TwoFactorType {
 }
 
 model User {
-  id         String    @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email      String    @unique
-  password   String
-  isVerified Boolean   @default(false)
-  isActive   Boolean   @default(true)
-  isDeleted  Boolean   @default(false)
-  isBanned   Boolean   @default(false)
-  profile    Profile?
-  roles      Role[]    @default([USER])
-  sessions   Session[]
+  id         String  @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String  @unique
+  password   String?
+  isVerified Boolean @default(false) @map("is_verified")
+  isActive   Boolean @default(true) @map("is_active")
+  isDeleted  Boolean @default(false) @map("is_deleted")
+  isBanned   Boolean @default(false) @map("is_banned")
+
+  // Google OAuth fields
+  googleId String? @unique @map("google_id")
+
+  profile  Profile?
+  roles    Role[]    @default([USER])
+  sessions Session[]
 
   // New relations for verification tables
   emailVerification  EmailVerification?
@@ -127,11 +131,10 @@ model TwoFactorToken {
   userId    String        @db.Uuid
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
-  used      Boolean       @default(false)
   createdAt DateTime      @default(now()) @map("created_at")
   updatedAt DateTime      @updatedAt @map("updated_at")
 
-  @@unique([userId, type, code])
-  @@index([userId, type, used, expiresAt])
+  @@unique([userId, type])
+  @@index([userId, type, expiresAt])
   @@map("two_factor_tokens")
 }

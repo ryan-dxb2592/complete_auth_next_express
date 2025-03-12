@@ -24,6 +24,7 @@
   "description": "",
   "dependencies": {
     "@prisma/client": "^6.4.1",
+    "@types/request-ip": "^0.0.41",
     "bcryptjs": "^3.0.2",
     "chalk": "^5.4.1",
     "cookie-parser": "^1.4.7",
@@ -40,8 +41,10 @@
     "morgan": "^1.10.0",
     "nodemailer": "^6.10.0",
     "passport": "^0.7.0",
+    "request-ip": "^3.3.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "ua-parser-js": "^2.0.2",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
     "zod": "^3.24.2"
@@ -53,6 +56,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/express-handlebars": "^5.3.1",
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.13.9",
     "@types/nodemailer": "^6.4.17",

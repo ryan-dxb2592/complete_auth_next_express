@@ -3,6 +3,7 @@ import { catchAsync } from "@/helpers/catchAsync";
 import { RegisterUserResponse, registerUserSchema } from "./schema";
 import { ApiResponse, sendSuccess, sendZodError } from "@/helpers/apiResponse";
 import { registerUserService } from "./service";
+import { HTTP_STATUS } from "@/constants";
 
 /**
  * @swagger
@@ -102,7 +103,6 @@ export const registerUser = catchAsync(
   async (req: Request, res: Response<ApiResponse<RegisterUserResponse>>) => {
     // Validate Request Body
 
-    console.log(req.body);
     const { data, success, error } = registerUserSchema.safeParse(req);
     if (!success) {
       return sendZodError(res, error);
@@ -114,7 +114,8 @@ export const registerUser = catchAsync(
     return sendSuccess(
       res,
       "Registered Successfully. Please very your email to continue.",
-      user
+      user,
+      HTTP_STATUS.CREATED
     );
   }
 );
