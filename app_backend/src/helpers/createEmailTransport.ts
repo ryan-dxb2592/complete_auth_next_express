@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { MAIL_HOST, MAIL_PORT, MAIL_USER, MAIL_PASS } from "@/constants";
 
 /**
  * Creates an email transport using nodemailer
@@ -11,12 +12,12 @@ export function createEmailTransport() {
   // }
 
   // Development transport using MailDev
-  const transporter = nodemailer.createTransport({
-    host: "smtp.ethereal.email",
-    port: 587,
+  var transporter = nodemailer.createTransport({
+    host: MAIL_HOST,
+    port: parseInt(MAIL_PORT),
     auth: {
-      user: "ivory.ullrich45@ethereal.email",
-      pass: "M2xAg1syYaRmSfunNS",
+      user: MAIL_USER,
+      pass: MAIL_PASS,
     },
   });
 

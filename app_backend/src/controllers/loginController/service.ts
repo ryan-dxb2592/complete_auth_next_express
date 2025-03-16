@@ -10,11 +10,9 @@ import {
   generateTokens,
   generateTwoFactorToken,
 } from "@/services/token.service";
-import { LoginUserResponse } from "./schema";
 import { findUserByEmail } from "@/helpers/dbCalls/users";
 import { HTTP_STATUS } from "@/constants";
 import { AppError } from "@/utils/error";
-import { UAParser } from "ua-parser-js";
 import { TwoFactorType } from "@prisma/client";
 import { sendTwoFactorCodeEmail } from "@/services/email.service";
 
@@ -47,7 +45,7 @@ const createAndSendTokensAndSession = async (
   userEmail: string,
   ipAddress: string,
   uaParser: UAParser.IResult,
-  existingRefreshToken: string
+  existingRefreshToken: string | null
 ) => {
   const { accessToken, refreshToken } = generateTokens(userId, userEmail);
 
@@ -124,7 +122,7 @@ const createAndSendTokensAndSession = async (
         deviceName: uaParser.device.model || null,
         browser: uaParser.browser.name || null,
         os: uaParser.os.name || null,
-        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         refreshToken: {
           create: {
             token: refreshToken,
@@ -239,7 +237,7 @@ export const verifyTwoFactorService = async (
   data: TwoFactorLoginInput,
   ipAddress: string,
   uaParser: UAParser.IResult,
-  existingRefreshToken: string
+  existingRefreshToken: string | null
 ) => {
   const { userId, code } = data;
 

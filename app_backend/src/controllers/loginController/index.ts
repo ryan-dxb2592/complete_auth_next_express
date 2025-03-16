@@ -15,6 +15,8 @@ import { loginUserService, verifyTwoFactorService } from "./service";
 import { UAParser } from "ua-parser-js";
 import requestIp from "request-ip";
 import { HTTP_STATUS } from "@/constants";
+import { getTokens } from "@/services/token.service";
+import { isMobile } from "@/utils/isMobile";
 
 /**
  * @swagger
@@ -113,20 +115,6 @@ import { HTTP_STATUS } from "@/constants";
  *                   example: "Invalid email or password"
  */
 
-// Function to check device
-const isMobile = async (userAgent: string) => {
-  const parser = new UAParser(userAgent);
-
-  const device = await parser.getDevice().withFeatureCheck();
-
-  const isMobile =
-    device.type === "mobile" ||
-    device.type === "tablet" ||
-    device.type === "smarttv";
-
-  return isMobile;
-};
-
 export const loginUser = catchAsync(
   async (
     req: Request,
@@ -172,7 +160,8 @@ export const loginUser = catchAsync(
 
       if (isDeviceMobile) {
         res.setHeader("Authorization", `Bearer ${accessToken}`);
-        res.setHeader("RefreshToken", refreshToken);
+        res.setHeader("x-access-token", accessToken);
+        res.setHeader("x-refresh-token", refreshToken);
 
         return sendSuccess(
           res,
@@ -191,14 +180,14 @@ export const loginUser = catchAsync(
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
           maxAge: 1 * 24 * 60 * 60 * 1000, // 1 days
         });
 
         res.cookie("accessToken", accessToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
           maxAge: 5 * 60 * 1000, // 5min
         });
 
@@ -226,7 +215,7 @@ export const verifyTwoFactor = catchAsync(
     const ipAddress = requestIp.getClientIp(req) || "";
     const uaParser = UAParser(req.headers["user-agent"] || "");
     const isDeviceMobile = await isMobile(req.headers["user-agent"] || "");
-    const existingRefreshToken = req.cookies?.refreshToken || "";
+    const { refreshToken: existingRefreshToken } = await getTokens(req);
 
     const { data, success, error } = twoFactorLoginSchema.safeParse(req);
 

@@ -41,7 +41,7 @@ export const verifyEmailService = async (
   }
 
   // Update user email verification status using transaction
-  const [verifiedUser, updatedVerification] = await prisma.$transaction([
+  await prisma.$transaction([
     prisma.user.update({
       where: { id: verification.user.id },
       data: { isVerified: true },

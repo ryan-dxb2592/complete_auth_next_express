@@ -26,3 +26,9 @@ export const JWT_ACCESS_TOKEN_EXPIRATION =
   process.env.JWT_ACCESS_TOKEN_EXPIRATION || "15m";
 export const JWT_REFRESH_TOKEN_EXPIRATION =
   process.env.JWT_REFRESH_TOKEN_EXPIRATION || "7d";
+
+// Mail
+export const MAIL_HOST: string = process.env.MAILTRAP_HOST || "";
+export const MAIL_PORT: string = process.env.MAILTRAP_PORT || "";
+export const MAIL_USER: string = process.env.MAILTRAP_USER || "";
+export const MAIL_PASS: string = process.env.MAILTRAP_PASS || "";

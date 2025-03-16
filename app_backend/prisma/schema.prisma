@@ -71,7 +71,7 @@ model Profile {
 model Session {
   id           String        @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId       String        @db.Uuid
-  expires      DateTime
+  expiresAt    DateTime      @map("expires_at")
   ipAddress    String
   userAgent    String
   deviceType   String?
@@ -92,7 +92,7 @@ model EmailVerification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String   @unique @db.Uuid
   token     String   @unique
-  expiresAt DateTime
+  expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -104,7 +104,7 @@ model PasswordReset {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String   @unique @db.Uuid
   token     String   @unique
-  expiresAt DateTime
+  expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -116,7 +116,7 @@ model RefreshToken {
   sessionId String   @unique @db.Uuid
   session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   token     String   @unique
-  expiresAt DateTime
+  expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -130,7 +130,7 @@ model TwoFactorToken {
   code      String
   userId    String        @db.Uuid
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
+  expiresAt DateTime      @map("expires_at")
   createdAt DateTime      @default(now()) @map("created_at")
   updatedAt DateTime      @updatedAt @map("updated_at")
 

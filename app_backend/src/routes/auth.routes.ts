@@ -4,6 +4,7 @@ import {
   resendVerification,
   loginUser,
   verifyTwoFactor,
+  refreshToken,
 } from "@/controllers";
 import {
   loginLimiter,
@@ -22,5 +23,6 @@ router.post(
 );
 router.post("/login", loginLimiter, loginUser);
 router.post("/verify-two-factor", verifyTwoFactor);
+router.post("/refresh-token", refreshToken);
 
 export default router;
