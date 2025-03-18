@@ -12,12 +12,16 @@ import { AppError } from "@/utils/error";
 import { isMobile } from "@/utils/isMobile";
 import { Request, Response } from "express";
 import prisma from "@/utils/db";
+import requestIp from "request-ip";
+import { UAParser } from "ua-parser-js";
 
 // Token expiration constants
 const ACCESS_TOKEN_EXPIRY = 5 * 60 * 1000; // 5 minutes
 const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export const refreshToken = catchAsync(async (req: Request, res: Response) => {
+  const ipAddress = requestIp.getClientIp(req) || "";
+  const uaParser = UAParser(req.headers["user-agent"] || "");
   const { refreshToken } = await getTokens(req);
   const isDeviceMobile = await isMobile(req.headers["user-agent"] || "");
 
@@ -26,6 +30,8 @@ export const refreshToken = catchAsync(async (req: Request, res: Response) => {
   }
 
   const decoded = (await verifyToken(refreshToken, "refresh")) as TokenPayload;
+
+  console.log("decoded", decoded);
 
   // Get session from database with refresh token
   const session = await getSessionByRefreshToken(refreshToken);
@@ -45,6 +51,17 @@ export const refreshToken = catchAsync(async (req: Request, res: Response) => {
   // Check if session is valid
   if (session?.userId !== decoded.userId) {
     throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+  }
+
+  console.log("session.userAgent", session.userAgent);
+  console.log("uaParser.ua.toString()", uaParser.ua.toString());
+
+  // Check if ip and uaParser are the same as the session since the session are device specific
+  if (
+    session.ipAddress !== ipAddress ||
+    session.userAgent !== uaParser.ua.toString()
+  ) {
+    throw new AppError("Session mismatch", HTTP_STATUS.UNAUTHORIZED);
   }
 
   // Generate new tokens

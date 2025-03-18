@@ -1,7 +1,12 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import { JWT_ACCESS_TOKEN_SECRET, JWT_REFRESH_TOKEN_SECRET } from "@/constants";
+import {
+  HTTP_STATUS,
+  JWT_ACCESS_TOKEN_SECRET,
+  JWT_REFRESH_TOKEN_SECRET,
+} from "@/constants";
 import { Request } from "express";
+import { AppError } from "@/utils/error";
 
 // Generate a verification token with a 1 hour expiry
 export const generateVerificationToken = () => {
@@ -111,6 +116,13 @@ export const verifyToken = async (
     const decoded = jwt.verify(token, secret) as TokenPayload;
     return decoded;
   } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new AppError("Token expired", HTTP_STATUS.UNAUTHORIZED);
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      throw new AppError("Invalid token", HTTP_STATUS.UNAUTHORIZED);
+    }
+
     throw new Error("Invalid token");
   }
 };

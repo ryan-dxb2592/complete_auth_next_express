@@ -68,6 +68,11 @@ const createAndSendTokensAndSession = async (
         where: { id: existingSession.id },
         data: {
           lastUsed: new Date(),
+          userAgent: uaParser.ua.toString(),
+          deviceType: uaParser.device.type || null,
+          deviceName: uaParser.device.model || null,
+          browser: uaParser.browser.name || null,
+          os: uaParser.os.name || null,
           refreshToken: {
             update: {
               token: refreshToken,
@@ -87,7 +92,7 @@ const createAndSendTokensAndSession = async (
       where: {
         userId,
         ipAddress,
-        userAgent: uaParser.ua,
+        userAgent: uaParser.ua.toString(),
       },
     });
 
@@ -95,8 +100,14 @@ const createAndSendTokensAndSession = async (
       // Update session with new token and expiry
       session = await prisma.session.update({
         where: { id: existingSession.id },
+
         data: {
           lastUsed: new Date(),
+          userAgent: uaParser.ua.toString(),
+          deviceType: uaParser.device.type || null,
+          deviceName: uaParser.device.model || null,
+          browser: uaParser.browser.name || null,
+          os: uaParser.os.name || null,
           refreshToken: {
             update: {
               token: refreshToken,
@@ -117,7 +128,7 @@ const createAndSendTokensAndSession = async (
       data: {
         userId,
         ipAddress,
-        userAgent: uaParser.ua,
+        userAgent: uaParser.ua.toString(),
         deviceType: uaParser.device.type || null,
         deviceName: uaParser.device.model || null,
         browser: uaParser.browser.name || null,

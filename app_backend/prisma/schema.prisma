@@ -87,6 +87,19 @@ model Session {
   @@index([userId])
 }
 
+model RefreshToken {
+  id        String   @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String   @unique @db.Uuid
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([sessionId])
+  @@map("refresh_tokens")
+}
+
 model EmailVerification {
   id        String   @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -109,19 +122,6 @@ model PasswordReset {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("password_resets")
-}
-
-model RefreshToken {
-  id        String   @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  sessionId String   @unique @db.Uuid
-  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@index([sessionId])
-  @@map("refresh_tokens")
 }
 
 model TwoFactorToken {
