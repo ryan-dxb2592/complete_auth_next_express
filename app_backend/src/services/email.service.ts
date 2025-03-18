@@ -97,3 +97,33 @@ export const sendTwoFactorCodeEmail = async (payload: {
     );
   }
 };
+
+// Send Password Reset Email
+export const sendPasswordResetEmail = async (payload: {
+  to: string;
+  userId: string;
+  token: string;
+  expiresAt: Date;
+}) => {
+  try {
+    const template = await loadTemplate("reset-password");
+    const resetLink = `${process.env.CLIENT_URL}/auth/reset-password/${payload.userId}/${payload.token}`;
+
+    const html = template({
+      resetLink: resetLink,
+      expiryTime: payload.expiresAt,
+      email: payload.to,
+    });
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to: payload.to,
+      subject: "Password Reset Request",
+      html,
+    });
+
+    logger.info(`Password reset email sent to ${payload.to}`);
+  } catch (error) {
+    logger.error("Error sending password reset email:", error);
+  }
+};
