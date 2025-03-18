@@ -4,8 +4,6 @@ import loadTemplate from "@/helpers/loadTemplates";
 import { AppError } from "@/utils/error";
 import { logger } from "@/utils/logger";
 
-const transporter = createEmailTransport();
-
 // Send Verification Email
 export const sendVerificationEmail = async (payload: {
   to: string;
@@ -14,6 +12,7 @@ export const sendVerificationEmail = async (payload: {
   expiresIn: string;
 }) => {
   try {
+    const transporter = await createEmailTransport();
     const template = await loadTemplate("verify-email");
     const verificationLink = `${process.env.CLIENT_URL}/auth/verify-email/${payload.userId}/${payload.token}`;
 
@@ -43,6 +42,7 @@ export const sendVerificationEmail = async (payload: {
 // Send Verification Complete Email
 export const sendVerifiedEmail = async (payload: { to: string }) => {
   try {
+    const transporter = await createEmailTransport();
     const template = await loadTemplate("verification-complete");
 
     const html = template({
@@ -73,6 +73,7 @@ export const sendTwoFactorCodeEmail = async (payload: {
   expiresAt: Date;
 }) => {
   try {
+    const transporter = await createEmailTransport();
     const template = await loadTemplate("two-factor-login");
 
     const html = template({
@@ -105,6 +106,7 @@ export const sendEnableTwoFactorEmail = async (payload: {
   expiresAt: Date;
 }) => {
   try {
+    const transporter = await createEmailTransport();
     const template = await loadTemplate("enable-two-factor");
 
     const html = template({
@@ -137,6 +139,7 @@ export const sendDisableTwoFactorEmail = async (payload: {
   expiresAt: Date;
 }) => {
   try {
+    const transporter = await createEmailTransport();
     const template = await loadTemplate("disable-two-factor");
 
     const html = template({
@@ -169,6 +172,7 @@ export const sendPasswordChangeTwoFactorEmail = async (payload: {
   expiresAt: Date;
 }) => {
   try {
+    const transporter = await createEmailTransport();
     const template = await loadTemplate("password-two-factor");
 
     const html = template({
@@ -202,6 +206,7 @@ export const sendTwoFactorStatusEmail = async (payload: {
   device: string;
 }) => {
   try {
+    const transporter = await createEmailTransport();
     const template = await loadTemplate("two-factor-status");
 
     const html = template({
@@ -236,6 +241,7 @@ export const sendPasswordResetEmail = async (payload: {
   expiresAt: Date;
 }) => {
   try {
+    const transporter = await createEmailTransport();
     const template = await loadTemplate("reset-password");
     const resetLink = `${process.env.CLIENT_URL}/auth/reset-password/${payload.userId}/${payload.token}`;
 
@@ -267,6 +273,7 @@ export const sendPasswordChangeCompleteEmail = async (payload: {
   to: string;
 }) => {
   try {
+    const transporter = await createEmailTransport();
     const template = await loadTemplate("change-password-complete");
 
     const html = template({

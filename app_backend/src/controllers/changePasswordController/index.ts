@@ -83,8 +83,8 @@ export const changePassword = catchAsync(
     if (response.responseType === "TWO_FACTOR") {
       return sendSuccess(
         res,
-        "Two-factor authentication code sent",
-        { message: "Please check your email for the verification code" },
+        "Please check your email for the verification code",
+        null,
         HTTP_STATUS.OK
       );
     }
@@ -92,7 +92,7 @@ export const changePassword = catchAsync(
     return sendSuccess(
       res,
       "Password changed successfully",
-      { message: "Password has been updated" },
+      null,
       HTTP_STATUS.OK
     );
   }
@@ -128,7 +128,7 @@ export const changePassword = catchAsync(
  *         description: Unauthorized
  */
 
-export const verifyChangePassword = catchAsync(
+export const verifyChangePasswordTwoFactor = catchAsync(
   async (
     req: AuthenticatedRequest,
     res: Response<ApiResponse<VerifyChangePasswordResponse>>
@@ -140,13 +140,8 @@ export const verifyChangePassword = catchAsync(
       return sendZodError(res, error);
     }
 
-    await verifyChangePasswordService(userId, data.body);
+    const { message } = await verifyChangePasswordService(userId, data.body);
 
-    return sendSuccess(
-      res,
-      "Password changed successfully",
-      { message: "Password has been updated" },
-      HTTP_STATUS.OK
-    );
+    return sendSuccess(res, message, null, HTTP_STATUS.OK);
   }
 );

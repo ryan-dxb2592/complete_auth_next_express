@@ -3,6 +3,7 @@ import { getTokens, verifyToken } from "@/services/token.service";
 import { AppError } from "@/utils/error";
 import { HTTP_STATUS } from "@/constants";
 import { getSessionByUserId } from "@/helpers/dbCalls/session";
+import { sendError } from "@/helpers/apiResponse";
 
 // Only check for access token and if not send 401
 

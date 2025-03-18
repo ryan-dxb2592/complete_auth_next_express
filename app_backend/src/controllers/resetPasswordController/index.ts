@@ -12,7 +12,7 @@ export const resetPassword = catchAsync(async (req: Request, res: Response) => {
     return sendZodError(res, error);
   }
 
-  const { message } = await resetPasswordService(data);
+  const { message } = await resetPasswordService(data.body);
 
   return sendSuccess(res, message, null, HTTP_STATUS.OK);
 });

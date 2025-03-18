@@ -32,10 +32,10 @@ export type VerifyChangePasswordInput = z.infer<
   typeof verifyChangePasswordSchema
 >["body"];
 
-export interface ChangePasswordResponse {
+export type ChangePasswordResponse = ApiResponse<{
   message: string;
-}
+}>;
 
-export interface VerifyChangePasswordResponse {
+export type VerifyChangePasswordResponse = ApiResponse<{
   message: string;
-}
+}>;

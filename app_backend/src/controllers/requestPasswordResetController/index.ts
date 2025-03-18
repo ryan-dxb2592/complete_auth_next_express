@@ -12,7 +12,7 @@ export const requestPasswordReset = catchAsync(
       return sendZodError(res, error);
     }
 
-    const { message } = await requestPasswordResetService(data.email);
+    const { message } = await requestPasswordResetService(data.body.email);
 
     return sendSuccess(res, message, null, HTTP_STATUS.OK);
   }

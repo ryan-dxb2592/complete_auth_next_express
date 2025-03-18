@@ -1,36 +1,49 @@
 import { generateTwoFactorToken } from "@/services/token.service";
-import { ToggleTwoFactorInput, VerifyTwoFactorInput } from "./schema";
+import { VerifyTwoFactorInput } from "./schema";
 import prisma from "@/utils/db";
 import {
   sendDisableTwoFactorEmail,
   sendEnableTwoFactorEmail,
+  sendTwoFactorStatusEmail,
 } from "@/services/email.service";
-import { TwoFactorType } from "@prisma/client";
+import { TwoFactorAction, TwoFactorType } from "@prisma/client";
+import { findUserById } from "@/helpers/dbCalls/users";
+import { AppError } from "@/utils/error";
+import { HTTP_STATUS } from "@/constants";
 
-export const toggleTwoFactorService = async (
-  userId: string,
-  data: ToggleTwoFactorInput
-) => {
-  const { enable, disable } = data;
+export const toggleTwoFactorService = async (userId: string) => {
+  const user = await findUserById(userId);
 
-  // if both are true, return error
-  if (enable && disable) {
-    return {
-      message: "Invalid request",
-    };
+  if (!user) {
+    throw new AppError("User not found", HTTP_STATUS.NOT_FOUND);
   }
 
   // Generate a new token for verification
   const twoFactorCode = generateTwoFactorToken(6);
 
   // Create a new token
-  const twoFactorToken = await prisma.twoFactorToken.create({
-    data: {
+  const twoFactorToken = await prisma.twoFactorToken.upsert({
+    where: {
+      userId_type: {
+        userId,
+        type: TwoFactorType.TWO_FACTOR,
+      },
+    },
+    create: {
       userId,
       type: TwoFactorType.TWO_FACTOR,
       code: twoFactorCode.code,
       expiresAt: twoFactorCode.expiresAt,
-      action: enable ? "ENABLE" : "DISABLE",
+      action: user.isTwoFactorEnabled
+        ? TwoFactorAction.DISABLE
+        : TwoFactorAction.ENABLE,
+    },
+    update: {
+      code: twoFactorCode.code,
+      expiresAt: twoFactorCode.expiresAt,
+      action: user.isTwoFactorEnabled
+        ? TwoFactorAction.DISABLE
+        : TwoFactorAction.ENABLE,
     },
     include: {
       user: {
@@ -42,14 +55,14 @@ export const toggleTwoFactorService = async (
   });
 
   // Send Two Factor Email based on action
-  if (enable) {
-    await sendEnableTwoFactorEmail({
+  if (user.isTwoFactorEnabled) {
+    await sendDisableTwoFactorEmail({
       to: twoFactorToken.user.email,
       code: twoFactorCode.code,
       expiresAt: twoFactorCode.expiresAt,
     });
   } else {
-    await sendDisableTwoFactorEmail({
+    await sendEnableTwoFactorEmail({
       to: twoFactorToken.user.email,
       code: twoFactorCode.code,
       expiresAt: twoFactorCode.expiresAt,
@@ -57,13 +70,14 @@ export const toggleTwoFactorService = async (
   }
 
   return {
-    message: enable
-      ? "Check your email for the two factor code to enable 2FA"
-      : "Check your email for the two factor code to disable 2FA",
+    message: user.isTwoFactorEnabled
+      ? "Check your email for the two factor code to disable 2FA"
+      : "Check your email for the two factor code to enable 2FA",
   };
 };
 
 export const verifyTwoFactorService = async (
+  email: string,
   userId: string,
   data: VerifyTwoFactorInput
 ) => {
@@ -82,9 +96,7 @@ export const verifyTwoFactorService = async (
   });
 
   if (!twoFactorToken) {
-    return {
-      message: "Invalid or expired code",
-    };
+    throw new AppError("Invalid or expired code", HTTP_STATUS.BAD_REQUEST);
   }
 
   // Delete the used token
@@ -95,7 +107,7 @@ export const verifyTwoFactorService = async (
   });
 
   // Handle based on action
-  if (twoFactorToken.action === "ENABLE") {
+  if (twoFactorToken.action === TwoFactorAction.ENABLE) {
     // Enable two factor for the user
     await prisma.user.update({
       where: {
@@ -106,12 +118,20 @@ export const verifyTwoFactorService = async (
       },
     });
 
+    // Send email to user
+    await sendTwoFactorStatusEmail({
+      to: email,
+      action: "enabled",
+      timestamp: new Date().toISOString(),
+      device: "web",
+    });
+
     return {
       message: "Two factor authentication has been enabled",
     };
   }
 
-  if (twoFactorToken.action === "DISABLE") {
+  if (twoFactorToken.action === TwoFactorAction.DISABLE) {
     // Delete all two factor tokens for the user
     await prisma.twoFactorToken.deleteMany({
       where: {
@@ -128,6 +148,14 @@ export const verifyTwoFactorService = async (
       data: {
         isTwoFactorEnabled: false,
       },
+    });
+
+    // Send email to user
+    await sendTwoFactorStatusEmail({
+      to: email,
+      action: "disabled",
+      timestamp: new Date().toISOString(),
+      device: "web",
     });
 
     return {

@@ -10,7 +10,7 @@ import {
   requestPasswordReset,
   resetPassword,
   changePassword,
-  verifyChangePassword,
+  verifyChangePasswordTwoFactor,
   toggleTwoFactor,
   verifyTwoFactor,
 } from "@/controllers";
@@ -38,7 +38,11 @@ router.post("/logout-all-sessions", authMiddleware, logoutAllSessions);
 router.post("/request-password-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 router.post("/change-password", authMiddleware, changePassword);
-router.post("/verify-change-password", authMiddleware, verifyChangePassword);
+router.post(
+  "/verify-change-password-two-factor",
+  authMiddleware,
+  verifyChangePasswordTwoFactor
+);
 router.post("/toggle-two-factor", authMiddleware, toggleTwoFactor);
 router.post("/verify-two-factor", authMiddleware, verifyTwoFactor);
 export default router;

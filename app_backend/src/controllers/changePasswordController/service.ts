@@ -5,7 +5,10 @@ import { generateTwoFactorToken } from "@/services/token.service";
 import { HTTP_STATUS } from "@/constants";
 import { AppError } from "@/utils/error";
 import { TwoFactorType } from "@prisma/client";
-import { sendPasswordChangeTwoFactorEmail } from "@/services/email.service";
+import {
+  sendPasswordChangeCompleteEmail,
+  sendPasswordChangeTwoFactorEmail,
+} from "@/services/email.service";
 
 export const changePasswordService = async (
   userId: string,
@@ -29,6 +32,14 @@ export const changePasswordService = async (
     throw new AppError(
       "Current password is incorrect",
       HTTP_STATUS.UNAUTHORIZED
+    );
+  }
+
+  // Check if the new password is the same as the current password
+  if (data.newPassword === data.currentPassword) {
+    throw new AppError(
+      "New password cannot be the same as the current password",
+      HTTP_STATUS.BAD_REQUEST
     );
   }
 
@@ -68,13 +79,18 @@ export const changePasswordService = async (
     data: { password: hashedPassword },
   });
 
+  // Send password change complete email
+  await sendPasswordChangeCompleteEmail({
+    to: user.email,
+  });
+
   return { responseType: "PASSWORD_CHANGE" };
 };
 
 export const verifyChangePasswordService = async (
   userId: string,
   data: VerifyChangePasswordInput
-): Promise<void> => {
+): Promise<{ message: string }> => {
   const twoFactorToken = await prisma.twoFactorToken.findUnique({
     where: {
       userId_type: {
@@ -107,4 +123,11 @@ export const verifyChangePasswordService = async (
   await prisma.twoFactorToken.delete({
     where: { id: twoFactorToken.id },
   });
+
+  // Send email to user
+
+  // Return success message
+  return {
+    message: "Password changed successfully",
+  };
 };
