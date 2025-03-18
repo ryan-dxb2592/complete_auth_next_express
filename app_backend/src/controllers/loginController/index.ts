@@ -115,6 +115,37 @@ import { isMobile } from "@/utils/isMobile";
  *                   example: "Invalid email or password"
  */
 
+// Token handling middleware
+const handleTokens = (
+  res: Response,
+  accessToken: string,
+  refreshToken: string,
+  isDeviceMobile: boolean
+) => {
+  if (isDeviceMobile) {
+    res.setHeader("Authorization", `Bearer ${accessToken}`);
+    res.setHeader("x-access-token", accessToken);
+    res.setHeader("x-refresh-token", refreshToken);
+    return true;
+  }
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  });
+
+  return false;
+};
+
 export const loginUser = catchAsync(
   async (
     req: Request,
@@ -154,60 +185,32 @@ export const loginUser = catchAsync(
     }
 
     if (response.responseType === "LOGIN") {
-      // For mobile we will send tokens in header and for web we will send in cookie
       const { accessToken, refreshToken, ...sessionWithoutTokens } =
         response.session;
+      const isMobileDevice = handleTokens(
+        res,
+        accessToken,
+        refreshToken,
+        isDeviceMobile
+      );
 
-      if (isDeviceMobile) {
-        res.setHeader("Authorization", `Bearer ${accessToken}`);
-        res.setHeader("x-access-token", accessToken);
-        res.setHeader("x-refresh-token", refreshToken);
-
-        return sendSuccess(
-          res,
-          "Login successful",
-          {
-            user: response.user,
-            session: sessionWithoutTokens,
-            accessToken,
-            refreshToken,
-          },
-          HTTP_STATUS.OK
-        );
-      }
-
-      if (!isDeviceMobile) {
-        res.cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-          maxAge: 1 * 24 * 60 * 60 * 1000, // 1 days
-        });
-
-        res.cookie("accessToken", accessToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-          maxAge: 5 * 60 * 1000, // 5min
-        });
-
-        return sendSuccess(
-          res,
-          "Login successful",
-          {
-            user: response.user,
-            session: sessionWithoutTokens,
-          },
-          HTTP_STATUS.OK
-        );
-      }
+      return sendSuccess(
+        res,
+        "Login successful",
+        {
+          user: response.user,
+          session: sessionWithoutTokens,
+          ...(isMobileDevice && { accessToken, refreshToken }),
+        },
+        HTTP_STATUS.OK
+      );
     }
 
     return sendError(res, "Login failed", HTTP_STATUS.UNAUTHORIZED);
   }
 );
 
-export const verifyTwoFactor = catchAsync(
+export const verifyLoginTwoFactor = catchAsync(
   async (
     req: Request,
     res: Response<ApiResponse<LoginUserResponse | null>>
@@ -234,53 +237,24 @@ export const verifyTwoFactor = catchAsync(
       return sendError(res, "Login failed", HTTP_STATUS.UNAUTHORIZED);
     }
 
-    // For mobile we will send tokens in header and for web we will send in cookie
     const { accessToken, refreshToken, ...sessionWithoutTokens } =
       response.session;
+    const isMobileDevice = handleTokens(
+      res,
+      accessToken,
+      refreshToken,
+      isDeviceMobile
+    );
 
-    if (isDeviceMobile) {
-      res.setHeader("Authorization", `Bearer ${accessToken}`);
-      res.setHeader("RefreshToken", refreshToken);
-
-      return sendSuccess(
-        res,
-        "Login successful",
-        {
-          user: response.user,
-          session: sessionWithoutTokens,
-          accessToken,
-          refreshToken,
-        },
-        HTTP_STATUS.OK
-      );
-    }
-
-    if (!isDeviceMobile) {
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 1 * 24 * 60 * 60 * 1000, // 1 days
-      });
-
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 5 * 60 * 1000, // 5min
-      });
-
-      return sendSuccess(
-        res,
-        "Login successful",
-        {
-          user: response.user,
-          session: sessionWithoutTokens,
-        },
-        HTTP_STATUS.OK
-      );
-    }
-
-    return sendError(res, "Login failed", HTTP_STATUS.UNAUTHORIZED);
+    return sendSuccess(
+      res,
+      "Login successful",
+      {
+        user: response.user,
+        session: sessionWithoutTokens,
+        ...(isMobileDevice && { accessToken, refreshToken }),
+      },
+      HTTP_STATUS.OK
+    );
   }
 );

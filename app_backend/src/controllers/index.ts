@@ -3,3 +3,8 @@ export * from "./verifyEmailController";
 export * from "./resendVerificationController";
 export * from "./loginController";
 export * from "./refreshTokenController";
+export * from "./logoutController";
+export * from "./resetPasswordController";
+export * from "./requestPasswordResetController";
+export * from "./changePasswordController";
+export * from "./twoFactorController";

@@ -3,6 +3,7 @@ import { ResetPasswordInput } from "./schema";
 import { AppError } from "@/utils/error";
 import { HTTP_STATUS } from "@/constants";
 import bcrypt from "bcryptjs";
+import { sendPasswordChangeCompleteEmail } from "@/services/email.service";
 
 export const resetPasswordService = async (data: ResetPasswordInput) => {
   const { userId, token, password } = data;
@@ -70,6 +71,11 @@ export const resetPasswordService = async (data: ResetPasswordInput) => {
       where: { id: passwordReset.id },
     }),
   ]);
+
+  // Send Password Change Complete Email
+  await sendPasswordChangeCompleteEmail({
+    to: passwordReset.user.email,
+  });
 
   return {
     message: "Password reset successfully",
