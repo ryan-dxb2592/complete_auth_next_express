@@ -6,7 +6,6 @@ import {
   sendEnableTwoFactorEmail,
   sendTwoFactorStatusEmail,
 } from "@/services/email.service";
-import { TwoFactorAction, TwoFactorType } from "@prisma/client";
 import { findUserById } from "@/helpers/dbCalls/users";
 import { AppError } from "@/utils/error";
 import { HTTP_STATUS } from "@/constants";
@@ -26,24 +25,22 @@ export const toggleTwoFactorService = async (userId: string) => {
     where: {
       userId_type: {
         userId,
-        type: TwoFactorType.TWO_FACTOR,
+        type: "TWO_FACTOR",
       },
     },
     create: {
       userId,
-      type: TwoFactorType.TWO_FACTOR,
+      type: "TWO_FACTOR",
       code: twoFactorCode.code,
       expiresAt: twoFactorCode.expiresAt,
       action: user.isTwoFactorEnabled
-        ? TwoFactorAction.DISABLE
-        : TwoFactorAction.ENABLE,
+        ? "DISABLE"
+        : "ENABLE",
     },
     update: {
       code: twoFactorCode.code,
       expiresAt: twoFactorCode.expiresAt,
-      action: user.isTwoFactorEnabled
-        ? TwoFactorAction.DISABLE
-        : TwoFactorAction.ENABLE,
+      action: user.isTwoFactorEnabled ? "DISABLE" : "ENABLE",
     },
     include: {
       user: {
@@ -87,7 +84,7 @@ export const verifyTwoFactorService = async (
   const twoFactorToken = await prisma.twoFactorToken.findFirst({
     where: {
       userId,
-      type: TwoFactorType.TWO_FACTOR,
+      type: "TWO_FACTOR",
       code,
       expiresAt: {
         gt: new Date(),
@@ -107,7 +104,7 @@ export const verifyTwoFactorService = async (
   });
 
   // Handle based on action
-  if (twoFactorToken.action === TwoFactorAction.ENABLE) {
+  if (twoFactorToken.action === "ENABLE") {
     // Enable two factor for the user
     await prisma.user.update({
       where: {
@@ -131,12 +128,12 @@ export const verifyTwoFactorService = async (
     };
   }
 
-  if (twoFactorToken.action === TwoFactorAction.DISABLE) {
+  if (twoFactorToken.action === "DISABLE") {
     // Delete all two factor tokens for the user
     await prisma.twoFactorToken.deleteMany({
       where: {
         userId,
-        type: TwoFactorType.TWO_FACTOR,
+        type: "TWO_FACTOR",
       },
     });
 

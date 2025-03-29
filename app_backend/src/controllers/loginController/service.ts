@@ -1,4 +1,3 @@
-import prisma from "@/utils/db";
 import {
   LoginServiceResponse,
   LoginUserInput,
@@ -13,7 +12,7 @@ import {
 import { findUserByEmail } from "@/helpers/dbCalls/users";
 import { HTTP_STATUS } from "@/constants";
 import { AppError } from "@/utils/error";
-import { TwoFactorType } from "@prisma/client";
+import prisma from "@/utils/db";
 import { sendTwoFactorCodeEmail } from "@/services/email.service";
 
 //Function to validate credentials
@@ -217,10 +216,10 @@ const initiateTwoFactorLogin = async (
 
   // Save the code to the database
   await prisma.twoFactorToken.upsert({
-    where: { userId_type: { userId, type: TwoFactorType.LOGIN } },
+    where: { userId_type: { userId, type: "LOGIN" } },
     create: {
       code,
-      type: TwoFactorType.LOGIN,
+      type: "LOGIN",
       expiresAt,
       userId,
     },
@@ -240,7 +239,7 @@ const initiateTwoFactorLogin = async (
   return {
     code,
     userId,
-    type: TwoFactorType.LOGIN,
+    type: "LOGIN",
   };
 };
 
@@ -253,7 +252,7 @@ export const verifyTwoFactorService = async (
   const { userId, code } = data;
 
   const twoFactorToken = await prisma.twoFactorToken.findFirst({
-    where: { userId, type: TwoFactorType.LOGIN },
+    where: { userId, type: "LOGIN" },
     include: {
       user: true,
     },
