@@ -19,6 +19,44 @@ import { UAParser } from "ua-parser-js";
 const ACCESS_TOKEN_EXPIRY = 5 * 60 * 1000; // 5 minutes
 const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+/**
+ * @swagger
+ * /auth/refresh-token:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Authentication]
+ *     description: Uses the refresh token to generate a new access token
+ *     parameters:
+ *       - in: cookie
+ *         name: refreshToken
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Refresh token stored in cookies (for web) or sent in headers (for mobile)
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Token refreshed successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                     session:
+ *                       type: object
+ *       401:
+ *         description: Invalid refresh token or session expired
+ */
 export const refreshToken = catchAsync(async (req: Request, res: Response) => {
   const ipAddress = requestIp.getClientIp(req) || "";
   const uaParser = UAParser(req.headers["user-agent"] || "");

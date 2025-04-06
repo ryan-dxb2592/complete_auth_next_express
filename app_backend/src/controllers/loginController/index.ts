@@ -211,6 +211,58 @@ export const loginUser = catchAsync(
 );
 
 export const verifyLoginTwoFactor = catchAsync(
+/**
+ * @swagger
+ * /auth/verify-two-factor:
+ *   post:
+ *     summary: Verify two-factor authentication code for login
+ *     tags: [Authentication]
+ *     description: Verifies the two-factor authentication code sent to the user's email during login
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - code
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: User ID received from the login endpoint
+ *                 example: "550e8400-e29b-41d4-a716-446655440000"
+ *               code:
+ *                 type: string
+ *                 description: Two-factor authentication code sent to the user's email
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Login successful"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                     session:
+ *                       type: object
+ *       400:
+ *         description: Invalid or expired code
+ *       401:
+ *         description: Authentication failed
+ */
   async (
     req: Request,
     res: Response<ApiResponse<LoginUserResponse | null>>
