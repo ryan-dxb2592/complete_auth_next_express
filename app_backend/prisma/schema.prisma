@@ -39,7 +39,10 @@ model User {
   isBanned   Boolean @default(false) @map("is_banned")
 
   // Google OAuth fields
-  googleId String? @unique @map("google_id")
+  googleId           String?  @unique @map("google_id")
+  googleAccessToken  String?  @map("google_access_token")
+  googleRefreshToken String?  @map("google_refresh_token")  // Encrypted in application layer
+  googleTokenExpiry  DateTime? @map("google_token_expiry")
 
   profile  Profile?
   roles    Role[]    @default([USER])

@@ -13,6 +13,7 @@ import {
   verifyChangePasswordTwoFactor,
   toggleTwoFactor,
   verifyTwoFactor,
+  googleAuth,
 } from "@/controllers";
 import { authMiddleware } from "@/middlewares/auth-middleware";
 import {
@@ -46,3 +47,5 @@ router.post(
 router.post("/toggle-two-factor", authMiddleware, toggleTwoFactor);
 router.post("/verify-two-factor", authMiddleware, verifyTwoFactor);
 export default router;
+
+router.post("/google-auth", googleAuth);

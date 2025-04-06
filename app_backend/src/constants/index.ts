@@ -32,3 +32,11 @@ export const MAIL_HOST: string = process.env.MAILTRAP_HOST || "";
 export const MAIL_PORT: string = process.env.MAILTRAP_PORT || "";
 export const MAIL_USER: string = process.env.MAILTRAP_USER || "";
 export const MAIL_PASS: string = process.env.MAILTRAP_PASS || "";
+
+// Google OAuth
+export const GOOGLE_CLIENT_ID: string = process.env.GOOGLE_CLIENT_ID || "";
+export const GOOGLE_CLIENT_SECRET: string = process.env.GOOGLE_CLIENT_SECRET || "";
+
+// Encryption
+export const ENCRYPTION_KEY: string = process.env.ENCRYPTION_KEY || "";
+

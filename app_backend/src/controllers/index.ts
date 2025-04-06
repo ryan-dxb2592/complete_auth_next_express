@@ -8,3 +8,4 @@ export * from "./resetPasswordController";
 export * from "./requestPasswordResetController";
 export * from "./changePasswordController";
 export * from "./twoFactorController";
+export * from "./googleController";

@@ -15,6 +15,8 @@ import Link from "next/link";
 import { useCallback } from "react";
 import { useForm } from "react-hook-form";
 import {Google} from "developer-icons"
+import { useGoogleLogin } from "@react-oauth/google";
+import { googleSignIn } from "@/actions/auth-actions";
 
 const RegisterForm: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   className,
@@ -33,6 +35,19 @@ const RegisterForm: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   const onSubmit = useCallback((data: SignUpFormValues) => {
     console.log(data);
   }, []);
+
+  // Google Sign In
+  const googleSignUp = useGoogleLogin({
+    flow:"auth-code",
+    onSuccess: async (codeResponse) => {
+      console.log(codeResponse.code);
+      const response = await googleSignIn(codeResponse.code);
+      console.log(response);
+    },
+    onError: (error) => {
+      console.log(error);
+    },
+  });
 
   return (
     <div className={cn("flex flex-col gap-4", className)} {...props}>
@@ -53,6 +68,7 @@ const RegisterForm: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
                   type="button"
                   variant="outline"
                   className="w-full cursor-pointer"
+                  onClick={() => googleSignUp()}
                 >
                     <Google className="size-4 " />
                   <span >Sign up with Google</span>

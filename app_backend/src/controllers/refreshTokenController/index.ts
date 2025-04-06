@@ -14,6 +14,8 @@ import { Request, Response } from "express";
 import prisma from "@/utils/db";
 import requestIp from "request-ip";
 import { UAParser } from "ua-parser-js";
+import { OAuth2Client } from "google-auth-library";
+import { decrypt, encrypt } from "@/utils/encrypt-decrypt";
 
 // Token expiration constants
 const ACCESS_TOKEN_EXPIRY = 5 * 60 * 1000; // 5 minutes
@@ -57,9 +59,64 @@ const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
  *       401:
  *         description: Invalid refresh token or session expired
  */
+
+// Helper function to handle token response
+const handleTokenResponse = (
+  res: Response,
+  accessToken: string,
+  refreshToken: string,
+  session: any,
+  isDeviceMobile: boolean
+) => {
+  const { user, refreshToken: tokens, ...sessionWithoutUser } = session;
+
+  // Handle mobile response
+  if (isDeviceMobile) {
+    res.setHeader("Authorization", `Bearer ${accessToken}`);
+    res.setHeader("x-access-token", accessToken);
+    res.setHeader("x-refresh-token", refreshToken);
+
+    return sendSuccess(
+      res,
+      "Token refreshed successfully",
+      {
+        user: session.user,
+        session: sessionWithoutUser,
+        accessToken,
+        refreshToken,
+      },
+      HTTP_STATUS.OK
+    );
+  }
+
+  // Handle web response
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  } as const;
+
+  res.cookie("accessToken", accessToken, {
+    ...cookieOptions,
+    maxAge: ACCESS_TOKEN_EXPIRY,
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    ...cookieOptions,
+    maxAge: REFRESH_TOKEN_EXPIRY,
+  });
+
+  return sendSuccess(
+    res,
+    "Token refreshed successfully",
+    { user: session.user, session: sessionWithoutUser },
+    HTTP_STATUS.OK
+  );
+};
+
 export const refreshToken = catchAsync(async (req: Request, res: Response) => {
   const ipAddress = requestIp.getClientIp(req) || "";
-  const uaParser = UAParser(req.headers["user-agent"] || "");
+  const uaParser = new UAParser(req.headers["user-agent"] || "");
   const { refreshToken } = await getTokens(req);
   const isDeviceMobile = await isMobile(req.headers["user-agent"] || "");
 
@@ -69,8 +126,6 @@ export const refreshToken = catchAsync(async (req: Request, res: Response) => {
 
   const decoded = (await verifyToken(refreshToken, "refresh")) as TokenPayload;
 
-  console.log("decoded", decoded);
-
   // Get session from database with refresh token
   const session = await getSessionByRefreshToken(refreshToken);
 
@@ -78,30 +133,108 @@ export const refreshToken = catchAsync(async (req: Request, res: Response) => {
     throw new AppError("Invalid refresh token", HTTP_STATUS.UNAUTHORIZED);
   }
 
-  // Check if session is expired
-  if (session?.expiresAt < new Date()) {
-    throw new AppError(
-      "Session expired, please login again",
-      HTTP_STATUS.UNAUTHORIZED
-    );
-  }
-
   // Check if session is valid
   if (session?.userId !== decoded.userId) {
     throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
   }
 
-  console.log("session.userAgent", session.userAgent);
-  console.log("uaParser.ua.toString()", uaParser.ua.toString());
-
-  // Check if ip and uaParser are the same as the session since the session are device specific
+  // Check if ip and user agent are the same as the session since the session is device specific
   if (
     session.ipAddress !== ipAddress ||
-    session.userAgent !== uaParser.ua.toString()
+    session.userAgent !== uaParser.getUA()
   ) {
     throw new AppError("Session mismatch", HTTP_STATUS.UNAUTHORIZED);
   }
 
+  // Check if session is expired
+  if (session.expiresAt < new Date()) {
+    // Try to renew using Google refresh token if available
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      include: { profile: true }
+    });
+
+    if (user?.googleRefreshToken) {
+      try {
+        // Decrypt Google refresh token
+        const decryptedRefreshToken = decrypt(user.googleRefreshToken);
+        
+        const oAuth2Client = new OAuth2Client(
+          process.env.GOOGLE_CLIENT_ID!,
+          process.env.GOOGLE_CLIENT_SECRET!
+        );
+        oAuth2Client.setCredentials({ refresh_token: decryptedRefreshToken });
+        
+        const { credentials } = await oAuth2Client.refreshAccessToken();
+        if (!credentials.id_token) throw new Error('Invalid Google token');
+
+        // Verify refreshed Google token
+        const ticket = await oAuth2Client.verifyIdToken({
+          idToken: credentials.id_token,
+          audience: process.env.GOOGLE_CLIENT_ID!
+        });
+        const payload = ticket.getPayload();
+        if (!payload || payload.email !== user.email) {
+          throw new AppError('Google token validation failed', HTTP_STATUS.UNAUTHORIZED);
+        }
+
+        // Update user's Google tokens
+        const encryptedRefresh = credentials.refresh_token 
+          ? encrypt(credentials.refresh_token)
+          : user.googleRefreshToken;
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            googleAccessToken: credentials.access_token ? encrypt(credentials.access_token) : user.googleAccessToken,
+            googleRefreshToken: encryptedRefresh,
+            googleTokenExpiry: credentials.expiry_date ? new Date(credentials.expiry_date) : null
+          }
+        });
+
+        // Create new session and tokens
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = generateTokens(user.id, user.email);
+        
+        // Delete expired session
+        await prisma.session.delete({ where: { id: session.id } });
+        
+        // Create new session
+        const newSession = await prisma.session.create({
+          data: {
+            userId: user.id,
+            ipAddress,
+            userAgent: uaParser.getUA(),
+            deviceType: uaParser.getDevice().type || null,
+            deviceName: uaParser.getDevice().model || null,
+            browser: uaParser.getBrowser().name || null,
+            os: uaParser.getOS().name || null,
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+            refreshToken: {
+              create: {
+                token: newRefreshToken,
+                expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRY),
+              }
+            }
+          },
+          include: {
+            user: true,
+            refreshToken: true,
+          }
+        });
+
+        return handleTokenResponse(res, newAccessToken, newRefreshToken, newSession, isDeviceMobile);
+      } catch (error) {
+        console.error("Google refresh token error:", error);
+        // Delete the expired session
+        await prisma.session.delete({ where: { id: session.id } });
+        throw new AppError("Session expired, please login again", HTTP_STATUS.UNAUTHORIZED);
+      }
+    } else {
+      throw new AppError("Session expired, please login again", HTTP_STATUS.UNAUTHORIZED);
+    }
+  }
+
+  // Normal refresh token flow for non-expired sessions
   // Generate new tokens
   const { accessToken, refreshToken: newRefreshToken } = generateTokens(
     session.userId,
@@ -133,48 +266,5 @@ export const refreshToken = catchAsync(async (req: Request, res: Response) => {
     );
   }
 
-  const { user, refreshToken: tokens, ...sessionWithoutUser } = updatedSession;
-
-  // Handle mobile response
-  if (isDeviceMobile) {
-    res.setHeader("Authorization", `Bearer ${accessToken}`);
-    res.setHeader("x-access-token", accessToken);
-    res.setHeader("x-refresh-token", newRefreshToken);
-
-    return sendSuccess(
-      res,
-      "Token refreshed successfully",
-      {
-        user: updatedSession.user,
-        session: sessionWithoutUser,
-        accessToken,
-        refreshToken: newRefreshToken,
-      },
-      HTTP_STATUS.OK
-    );
-  }
-
-  // Handle web response
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  } as const;
-
-  res.cookie("accessToken", accessToken, {
-    ...cookieOptions,
-    maxAge: ACCESS_TOKEN_EXPIRY,
-  });
-
-  res.cookie("refreshToken", newRefreshToken, {
-    ...cookieOptions,
-    maxAge: REFRESH_TOKEN_EXPIRY,
-  });
-
-  return sendSuccess(
-    res,
-    "Token refreshed successfully",
-    { user: updatedSession.user, session: sessionWithoutUser },
-    HTTP_STATUS.OK
-  );
+  return handleTokenResponse(res, accessToken, newRefreshToken, updatedSession, isDeviceMobile);
 });
