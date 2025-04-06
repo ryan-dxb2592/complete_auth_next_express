@@ -10,14 +10,123 @@ import prisma from "@/utils/db";
 import { generateTokens } from "@/services/token.service";
 import { isMobile } from "@/utils/isMobile";
 
+/**
+ * @swagger
+ * /auth/google:
+ *   post:
+ *     summary: Authenticate with Google
+ *     tags: [Authentication]
+ *     description: Authenticates a user with Google OAuth 2.0
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: Authorization code from Google OAuth 2.0 flow
+ *                 example: "4/0AY0e-g7..."
+ *     responses:
+ *       200:
+ *         description: Google authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Google authentication successful"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                           example: "550e8400-e29b-41d4-a716-446655440000"
+ *                         email:
+ *                           type: string
+ *                           format: email
+ *                           example: "user@gmail.com"
+ *                         isVerified:
+ *                           type: boolean
+ *                           example: true
+ *                         googleId:
+ *                           type: string
+ *                           example: "109872384756293846523"
+ *                         profile:
+ *                           type: object
+ *                           properties:
+ *                             firstName:
+ *                               type: string
+ *                               example: "John"
+ *                             lastName:
+ *                               type: string
+ *                               example: "Doe"
+ *                             avatar:
+ *                               type: string
+ *                               example: "https://lh3.googleusercontent.com/a/ACg8ocJH..."
+ *                     session:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                           example: "550e8400-e29b-41d4-a716-446655440000"
+ *                         deviceType:
+ *                           type: string
+ *                           example: "desktop"
+ *                         browser:
+ *                           type: string
+ *                           example: "Chrome"
+ *                         os:
+ *                           type: string
+ *                           example: "Windows"
+ *                     accessToken:
+ *                       type: string
+ *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                       description: Only included in response for mobile clients
+ *                     refreshToken:
+ *                       type: string
+ *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                       description: Only included in response for mobile clients
+ *       400:
+ *         description: Google authentication failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Google authentication failed"
+ */
 export const googleAuth = catchAsync(async (req: Request, res: Response) => {
+  console.log(req.headers);
+
   const { code } = req.body;
 
   // Get User Agent and IP address
   const ipAddress = requestIp.getClientIp(req) || "";
-  const uaParser = UAParser(req.headers["user-agent"] || "");
+  const uaParser = new UAParser(req.headers["user-agent"] || "");
   const isDeviceMobile = await isMobile(req.headers["user-agent"] || "");
 
+
+  console.log(uaParser.getUA());
+  
   const oAuth2Client = new OAuth2Client(
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
@@ -42,7 +151,6 @@ export const googleAuth = catchAsync(async (req: Request, res: Response) => {
     return sendError(res, "Google authentication failed", HTTP_STATUS.BAD_REQUEST);
   }
 
-  console.log(googlePayload);
 
   // Encrypt the tokens
   const encryptedAccessToken = encrypt(tokens.access_token || "");
@@ -110,7 +218,7 @@ export const googleAuth = catchAsync(async (req: Request, res: Response) => {
     where: {
       userId: user.id,
       ipAddress,
-      userAgent: uaParser.ua.toString(),
+      userAgent: uaParser.getUA(),
     },
   });
 
@@ -121,11 +229,11 @@ export const googleAuth = catchAsync(async (req: Request, res: Response) => {
       where: { id: existingSession.id },
       data: {
         lastUsed: new Date(),
-        userAgent: uaParser.ua.toString(),
-        deviceType: uaParser.device.type || null,
-        deviceName: uaParser.device.model || null,
-        browser: uaParser.browser.name || null,
-        os: uaParser.os.name || null,
+        userAgent: uaParser.getUA(),
+        deviceType: uaParser.getDevice().type || null,
+        deviceName: uaParser.getDevice().model || null,
+        browser: uaParser.getBrowser().name || null,
+        os: uaParser.getOS().name || null,
         refreshToken: {
           update: {
             token: refreshToken,
@@ -144,11 +252,11 @@ export const googleAuth = catchAsync(async (req: Request, res: Response) => {
       data: {
         userId: user.id,
         ipAddress,
-        userAgent: uaParser.ua.toString(),
-        deviceType: uaParser.device.type || null,
-        deviceName: uaParser.device.model || null,
-        browser: uaParser.browser.name || null,
-        os: uaParser.os.name || null,
+        userAgent: uaParser.getUA(),
+        deviceType: uaParser.getDevice().type || null,
+        deviceName: uaParser.getDevice().model || null,
+        browser: uaParser.getBrowser().name || null,
+        os: uaParser.getOS().name || null,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         refreshToken: {
           create: {
