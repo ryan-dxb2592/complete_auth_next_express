@@ -3,7 +3,7 @@ import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "@/config/swagger/swagger.config";
 import { HTTP_STATUS } from "@/constants";
 import authRoutes from "./auth.routes";
-
+import userRoutes from "./user.routes";
 const router = Router();
 
 // Health Check Route
@@ -26,5 +26,8 @@ router.use(
 
 // Auth Routes
 router.use("/auth", authRoutes);
+
+// User Routes
+router.use("/user", userRoutes);
 
 export default router;

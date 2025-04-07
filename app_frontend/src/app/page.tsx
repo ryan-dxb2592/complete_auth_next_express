@@ -1,6 +1,15 @@
+'use client'
+
 import Link from "next/link";
 import { KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import dynamic from 'next/dynamic';
+
+// Import the CookieDebugger with client-side rendering only
+const CookieDebugger = dynamic(
+  () => import('@/components/common/CookieDebugger'),
+  { ssr: false }
+);
 
 const Home = () => {
   return (
@@ -37,6 +46,9 @@ const Home = () => {
         <p className="text-sm text-muted-foreground">
           Built with Next.js, Express, and Prisma
         </p>
+        
+        {/* Add the CookieDebugger component */}
+        <CookieDebugger />
       </div>
     </div>
   );

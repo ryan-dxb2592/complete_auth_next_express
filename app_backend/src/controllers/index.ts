@@ -1,11 +1,4 @@
-export * from "./registerController";
-export * from "./verifyEmailController";
-export * from "./resendVerificationController";
-export * from "./loginController";
-export * from "./refreshTokenController";
-export * from "./logoutController";
-export * from "./resetPasswordController";
-export * from "./requestPasswordResetController";
-export * from "./changePasswordController";
-export * from "./twoFactorController";
-export * from "./googleController";
+import * as authControllers from "./authControllers";
+import * as userControllers from "./userControllers";
+
+export { authControllers, userControllers };

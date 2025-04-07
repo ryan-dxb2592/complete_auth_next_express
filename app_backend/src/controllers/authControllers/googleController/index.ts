@@ -115,7 +115,6 @@ import { isMobile } from "@/utils/isMobile";
  *                   example: "Google authentication failed"
  */
 export const googleAuth = catchAsync(async (req: Request, res: Response) => {
-  console.log(req.headers);
 
   const { code } = req.body;
 

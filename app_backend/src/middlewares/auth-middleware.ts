@@ -3,7 +3,6 @@ import { getTokens, verifyToken } from "@/services/token.service";
 import { AppError } from "@/utils/error";
 import { HTTP_STATUS } from "@/constants";
 import { getSessionByUserId } from "@/helpers/dbCalls/session";
-import { sendError } from "@/helpers/apiResponse";
 
 // Only check for access token and if not send 401
 
@@ -13,6 +12,7 @@ export const authMiddleware = async (
   next: NextFunction
 ) => {
   try {
+    console.log("Middleware Running", req);
     const { accessToken } = await getTokens(req);
 
     if (!accessToken) {

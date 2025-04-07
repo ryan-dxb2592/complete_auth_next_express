@@ -8,7 +8,6 @@ import {
 } from "./schema";
 import {
   ApiResponse,
-  sendError,
   sendSuccess,
   sendZodError,
 } from "@/helpers/apiResponse";

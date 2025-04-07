@@ -8,7 +8,7 @@ import { engine } from "express-handlebars";
 import path from "path";
 import indexRouter from "@/routes";
 import { errorHandler } from "./middlewares/errorHandler";
-
+import corsOptions from "./config/swagger/cors/cors-options";
 const app: Express = express();
 
 // View engine setup
@@ -24,7 +24,7 @@ app.set("view engine", "hbs");
 app.set("views", path.join(__dirname, "views"));
 
 app.use(helmet());
-app.use(cors({ credentials: true }));
+app.use(cors(corsOptions));
 app.use(morgan("dev"));
 app.use(cookieParser());
 app.use(compression());

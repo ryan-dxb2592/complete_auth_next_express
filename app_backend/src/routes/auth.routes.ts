@@ -14,7 +14,10 @@ import {
   toggleTwoFactor,
   verifyTwoFactor,
   googleAuth,
-} from "@/controllers";
+} from "@/controllers/authControllers";
+
+import { getMeController } from "@/controllers/userControllers";
+
 import { authMiddleware } from "@/middlewares/auth-middleware";
 import {
   loginLimiter,
@@ -24,6 +27,7 @@ import { Router } from "express";
 
 const router = Router();
 
+// Auth Routes
 router.post("/register", registerUser);
 router.post("/verify-email/:userId/:token", verifyEmail);
 router.post(
