@@ -12,7 +12,7 @@ export const authMiddleware = async (
   next: NextFunction
 ) => {
   try {
-    console.log("Middleware Running", req);
+    console.log("Middleware Running", req.headers);
     const { accessToken } = await getTokens(req);
 
     if (!accessToken) {

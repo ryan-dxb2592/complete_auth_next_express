@@ -126,7 +126,7 @@ const handleTokenResponse = (
 };
 
 export const refreshToken = catchAsync(async (req: Request, res: Response) => {
-  console.log("Refresh Token Request Headers:", req.headers);
+  console.log("Refresh TOken Endpoint Hit ......................................")
   console.log("Refresh Token Request Cookies:", req.cookies);
   console.log("Origin:", req.headers.origin);
   console.log("Referer:", req.headers.referer);

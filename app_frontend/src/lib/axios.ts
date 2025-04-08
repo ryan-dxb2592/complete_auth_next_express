@@ -60,7 +60,45 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
 
 // Response interceptor handles token refresh
 api.interceptors.response.use(
-  response => response,
+  async response => {
+
+    // Server side response handling
+    if (typeof window === 'undefined') {
+
+    // Set the accessToken and refreshToken in the cookie store
+    console.log("Response data on server side:", response.data);
+    console.log("Response cookies on server side:", response.headers['set-cookie']);
+    if (response.headers['set-cookie'] && response.headers['set-cookie'].length > 0) {
+      
+      const accessToken = response.headers['set-cookie'][0].split(';')[0].split('=')[1];
+      const refreshToken = response.headers['set-cookie'][1].split(';')[0].split('=')[1];
+
+      console.log("Access token on server side:", accessToken);
+      console.log("Refresh token on server side:", refreshToken);
+      const cookieStore = await cookies();
+      cookieStore.set('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 15 * 60 * 1000, // 15 minutes
+        path: '/',
+        sameSite: 'lax',
+      });
+      cookieStore.set('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/',
+        sameSite: 'lax',
+      });
+    }
+  }
+
+    // Client side response handling
+    if (typeof window !== 'undefined') {
+      console.log("Response on client side:", response);
+    }
+    return response;
+  },
   async error => {
     const originalRequest = error.config;
     

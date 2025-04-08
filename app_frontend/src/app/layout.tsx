@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import "./globals.css";
 import { QueryProvider } from "@/providers/query-provider";
+import ReactScan from "@/components/common/react-scan";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      
+      <ReactScan />
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
