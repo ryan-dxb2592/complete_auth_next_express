@@ -30,9 +30,10 @@ export default function ManualRefreshButton() {
     
     try {
       const refreshResult = await refreshTokenManual();
+      console.log("Refresh result:", refreshResult);
       setResult(refreshResult);
       
-      if (!refreshResult.success) {
+      if (refreshResult.status !== 'success') {
         setError(refreshResult.message);
       }
     } catch (err) {

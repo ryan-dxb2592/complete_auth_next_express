@@ -302,7 +302,7 @@ export const googleAuth = catchAsync(async (req: Request, res: Response) => {
 
   res.cookie("accessToken", accessToken, {
     ...cookieOptions,
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    maxAge: 1 * 60 * 1000, // 15 minutes
   });
 
   res.cookie("refreshToken", refreshToken, {

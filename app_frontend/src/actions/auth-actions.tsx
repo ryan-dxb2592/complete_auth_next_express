@@ -1,44 +1,83 @@
 'use server'
 
-import api from '../lib/axios';
 import { cookies } from 'next/headers';
-import { AxiosError } from 'axios';
+import { post } from './fetch-wrapper';
+import { API_ENDPOINT, AUTH_ENDPOINTS, COOKIE_NAMES } from '../constants';
 
-// Google Sign In
-export const googleSignIn = async (code: string) => {
+// Define types for auth responses
+export interface AuthResponse {
+  success: boolean;
+  message: string;
+  user?: {
+    id: string;
+    email: string;
+    name?: string;
+  };
+}
+
+export interface RefreshTokenResponse {
+  success: boolean;
+  message: string;
+  accessToken?: string;
+  refreshToken?: string;
+}
+
+/**
+ * Sets cookies from a Response object
+ * @param response The Response object containing Set-Cookie headers
+ */
+export const setCookies = async (response: Response) => {
+  'use server'
+  const cookieStore = await cookies();
+  const cookieHeaders = response.headers.getSetCookie();
+  
+  cookieHeaders?.forEach(cookie => {
+    const [cookieValue] = cookie.split(';');
+    const [name, value] = cookieValue.split('=');
+    cookieStore.set(name, value, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+    });
+  });
+};
+
+/**
+ * Handles Google Sign In
+ * @param code The authorization code from Google
+ * @returns The authentication response
+ */
+export const googleSignIn = async (code: string): Promise<AuthResponse> => {
   try {
-    console.log("Starting Google Sign In with code");
-    
-    // Create a special config for this request to ensure it works properly with CORS
-    const response = await api.post("/api/v1/auth/google-auth", 
-      { code },
-      { 
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      }
+    // Use the fetch wrapper to make the request
+    const { data, error, response } = await post<AuthResponse>(
+      AUTH_ENDPOINTS.GOOGLE_AUTH,
+      { code }
     );
-        
-    // Log cookies to see if they're being set correctly
-    const cookieStore = await cookies();
-    console.log("Cookie store after auth:", cookieStore.getAll().map(c => c.name));
     
-    // Important: no need to manually set cookies server-side
-    // The browser will receive and store the cookies directly from the API response
-    // The server actions shouldn't try to manipulate cookies that should be managed by the browser
+    if (data) {
+      console.log("Google sign in response:", data);
+    }
     
-    // Return the data from the response (without sensitive token information)
-    const responseData = { ...response.data };
-    // Remove sensitive token data if it exists in the response
-    delete responseData.accessToken;
-    delete responseData.refreshToken;
+    if (error) {
+      console.error("Google sign in error:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to sign in with Google",
+      };
+    }
     
-    return responseData;
+    // If we have a response object, set the cookies
+    if (response) {
+      await setCookies(response);
+    }
+    
+    return data || { success: false, message: "No data returned from server" };
   } catch (error) {
-    console.error("Error during Google sign-in:", error);
-    throw error;
+    console.error("Unexpected error during Google sign in:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "An unexpected error occurred",
+    };
   }
 };
 
@@ -46,63 +85,74 @@ export const googleSignIn = async (code: string) => {
  * Manually triggers a refresh token request
  * @returns Response data from the refresh token endpoint
  */
-export const refreshTokenManual = async () => {
+export const refreshTokenManual = async (): Promise<RefreshTokenResponse> => {
   try {
-    console.log("Manually triggering refresh token");
-    
     // Get current cookies to include in debug info
     const cookieStore = await cookies();
-    const accessToken = cookieStore.get('accessToken')?.value;
-    const refreshToken = cookieStore.get('refreshToken')?.value;
+    const accessToken = cookieStore.get(COOKIE_NAMES.ACCESS_TOKEN)?.value;
     
-    const hasTokens = {
-      accessToken: !!accessToken,
-      refreshToken: !!refreshToken
-    };
-    
-    console.log("Tokens present before refresh:", hasTokens);
-    
-    // Make the request to refresh the token
-    const response = await api.post("/api/v1/auth/refresh-token", 
-      {}, 
+    // Make the request to refresh the token using our fetch wrapper
+    const { data, error, response } = await post<RefreshTokenResponse>(
+      AUTH_ENDPOINTS.REFRESH_TOKEN,
+      {},
       {
-        withCredentials: true,
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Authorization': `Bearer ${accessToken}`,
         }
       }
     );
     
-    // Check cookies after refresh
-    const updatedCookieStore = await cookies();
-    console.log("Cookie store after refresh:", updatedCookieStore.getAll().map(c => c.name));
+    if (error) {
+      console.error("Token refresh error:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to refresh token",
+      };
+    }
     
-    // Return response data for debugging but remove sensitive info
-    const responseData = { 
-      success: true,
-      message: response.data.message || "Token refreshed successfully",
-      status: response.status,
-      cookiesBefore: hasTokens,
-      cookiesAfter: {
-        accessToken: !!updatedCookieStore.get('accessToken')?.value,
-        refreshToken: !!updatedCookieStore.get('refreshToken')?.value
-      }
-    };
+    // If we have a response object, set the cookies
+    if (response) {
+      await setCookies(response);
+    }
     
-    return responseData;
-  } catch (error: unknown) {
-    console.error("Error during manual token refresh:", error);
-    
-    const axiosError = error as AxiosError;
-    
-    // Return structured error response
+    return data || { success: false, message: "No data returned from server" };
+  } catch (error) {
+    console.error("Unexpected error during token refresh:", error);
     return {
       success: false,
-      message: axiosError.message || "Failed to refresh token",
-      status: axiosError.response?.status || 500,
-      error: axiosError.response?.data || axiosError.message
+      message: error instanceof Error ? error.message : "An unexpected error occurred",
     };
   }
 };
 
+/**
+ * Server action to refresh the token
+ * This is used by the middleware
+ * @returns The Response object from the refresh token endpoint
+ */
+export const refreshTokenAction = async (): Promise<Response> => {
+  try {
+    // Get current cookies
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get(COOKIE_NAMES.ACCESS_TOKEN)?.value;
+    
+    // Make the request to refresh the token
+    const response = await fetch(`${API_ENDPOINT}${AUTH_ENDPOINTS.REFRESH_TOKEN}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json', 
+        'Authorization': `Bearer ${accessToken}`,
+      }
+    });
+    
+    // Update cookies after refresh
+    await setCookies(response);
+    
+    return response;
+  } catch (error) {
+    console.error("Error in refreshTokenAction:", error);
+    throw error;
+  }
+};

@@ -1,10 +1,10 @@
-import axios, { InternalAxiosRequestConfig } from 'axios';
-import { redirect } from "next/navigation";
-import { cookies } from 'next/headers';
+
+import axios, { InternalAxiosRequestConfig, AxiosResponse } from 'axios';
+import { getAccessToken } from './get-cookies';
 
 // Create an axios instance with proper CORS credentials
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/',
   withCredentials: true, // This is critical for cookies to be sent and received
   headers: {
     'Content-Type': 'application/json',
@@ -12,212 +12,94 @@ const api = axios.create({
   }
 });
 
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (value: unknown) => void;
-  reject: (reason?: unknown) => void;
-}> = [];
-
-const processQueue = (error?: unknown) => {
-  failedQueue.forEach(promise => {
-    if (error) {
-      promise.reject(error);
-    } else {
-      promise.resolve(undefined);
-    }
+// Custom adapter to use Next.js fetch API
+const customAdapter = async (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => {
+  const { url, method, data, headers, baseURL } = config;
+  
+  // Construct the full URL
+  const fullUrl = `${baseURL}${url}`;
+  
+  // Prepare the fetch options
+  const fetchOptions: RequestInit = {
+    method: method?.toUpperCase(),
+    headers: headers as HeadersInit,
+    credentials: 'include',
+  };
+  
+  // Add body for non-GET requests
+  if (data && method !== 'get') {
+    fetchOptions.body = JSON.stringify(data);
+  }
+  
+  // Use the Next.js fetch API
+  const response = await fetch(fullUrl, fetchOptions);
+  
+  // Convert the response to the format expected by axios
+  const responseData = await response.json();
+  
+  // Convert Headers to the format expected by axios
+  const axiosHeaders: Record<string, string> = {};
+  response.headers.forEach((value, key) => {
+    axiosHeaders[key] = value;
   });
-  failedQueue = [];
+  
+  return {
+    data: responseData,
+    status: response.status,
+    statusText: response.statusText,
+    headers: axiosHeaders,
+    config,
+  } as AxiosResponse;
 };
+
+// Set the custom adapter
+api.defaults.adapter = customAdapter;
 
 // Request interceptor adds auth header when needed
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-  // Don't log full config to avoid clutter, just log key details
-  console.log(`Request: ${config.method?.toUpperCase()} ${config.url}`);
-  console.log("WithCredentials:", config.withCredentials);
-  
-  // Only access cookies in browser context
-  if (typeof window !== 'undefined') {
-    // Log browser cookies for debugging
-    console.log("Browser cookies:", document.cookie);
-  } else {
-    // Server-side context
+  // Only try to access cookies on the server side
+  if (typeof window === 'undefined') {
     try {
-      const cookieStore = await cookies();
-      const accessToken = cookieStore.get('accessToken')?.value;
-
+      
+      const accessToken = await getAccessToken();
+      
+      // Add access token to all requests if available
       if (accessToken) {
-        config.headers.Authorization = `Bearer ${accessToken}`;
-        console.log("Added token to Authorization header (server-side)");
-      } else {
-        console.log("No accessToken found in cookies (server-side)");
+        config.headers['Authorization'] = `Bearer ${accessToken}`;
       }
     } catch (error) {
-      console.error("Error accessing cookies on server:", error);
+      console.error('Error accessing cookies:', error);
+    }
+  } else {
+    // On the client side, cookies are automatically included with credentials: 'include'
+    // We can still check for the token in localStorage if needed
+    const accessToken = await getAccessToken();
+    if (accessToken) {
+      config.headers['Authorization'] = `Bearer ${accessToken}`;
     }
   }
+
+  // Log key request details
+  console.log('Request:', {
+    url: config.url,
+    method: config.method,
+    hasAccessToken: !!config.headers['Authorization']
+  });
+  
   return config;
 });
 
-// Response interceptor handles token refresh
+// Simplified response interceptor - no token refresh logic needed
 api.interceptors.response.use(
-  async response => {
-
-    // Server side response handling
-    if (typeof window === 'undefined') {
-
-    // Set the accessToken and refreshToken in the cookie store
-    console.log("Response data on server side:", response.data);
-    console.log("Response cookies on server side:", response.headers['set-cookie']);
-    if (response.headers['set-cookie'] && response.headers['set-cookie'].length > 0) {
-      
-      const accessToken = response.headers['set-cookie'][0].split(';')[0].split('=')[1];
-      const refreshToken = response.headers['set-cookie'][1].split(';')[0].split('=')[1];
-
-      console.log("Access token on server side:", accessToken);
-      console.log("Refresh token on server side:", refreshToken);
-      const cookieStore = await cookies();
-      cookieStore.set('accessToken', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 15 * 60 * 1000, // 15 minutes
-        path: '/',
-        sameSite: 'lax',
-      });
-      cookieStore.set('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: '/',
-        sameSite: 'lax',
-      });
-    }
-  }
-
-    // Client side response handling
-    if (typeof window !== 'undefined') {
-      console.log("Response on client side:", response);
-    }
-    return response;
-  },
-  async error => {
-    const originalRequest = error.config;
+  (response) => response,
+  (error) => {
+    // Log error details
+    console.error('Response error:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      message: error.message
+    });
     
-    // If error is 401 (Unauthorized) and we haven't retried already
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        // Wait for the current refresh to complete
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then(() => {
-          return api(originalRequest);
-        });
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        console.log("Refreshing token...");
-        
-        // For browser environment, log cookies to debug
-         // Client-side handling
-         if (typeof window !== 'undefined') {
-          // Use axios directly to maintain credentials
-          const refreshResponse = await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/refresh-token`,
-            {},
-            { withCredentials: true,
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-              }
-             }
-          );
-          console.log("Refreshed token on client-side:", refreshResponse.data);
-          
-          // For client-side, rely on cookies being set automatically
-          return api(originalRequest);
-        
-        }
-        
-        // Server-side refresh handling
-        const cookieStore = await cookies();
-        //  Get the accessToken and refreshToken from the cookie store
-        const accessToken = cookieStore.get('accessToken')?.value;
-        const refreshToken = cookieStore.get('refreshToken')?.value;
-
-        console.log("Access token from cookie store:", accessToken);
-        console.log("Refresh token from cookie store:", refreshToken);
-
-
-        const refreshResponse = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/refresh-token`,
-          {},
-          { withCredentials: true,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-              'X-Refresh-Token': refreshToken
-            }
-          }
-        );
-
-        console.log("Token refreshed successfully on server-side", refreshResponse.data);
-        
-        // If tokens are returned in the response body (for mobile/SPA),
-        // we need to handle them manually
-        if (refreshResponse.data?.accessToken && refreshResponse.data?.refreshToken) {
-          console.log("Tokens received in response body");
-          
-          // For server-side, we set them in the cookie store
-          try {
-            const cookieStore = await cookies();
-            
-            cookieStore.set('accessToken', refreshResponse.data.accessToken, {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === 'production',
-              maxAge: 15 * 60 * 1000, // 15 minutes
-              path: '/',
-              sameSite: 'lax',
-            });
-            
-            cookieStore.set('refreshToken', refreshResponse.data.refreshToken, {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === 'production',
-              maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-              path: '/',
-              sameSite: 'lax',
-            });
-          } catch (cookieError) {
-            console.error("Error setting cookies after refresh:", cookieError);
-          }
-        }
-        
-        processQueue();
-        
-        // For server-side requests, we need to add the Authorization header
-        try {
-          const cookieStore = await cookies();
-          const newAccessToken = cookieStore.get('accessToken')?.value;
-          
-          if (newAccessToken) {
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          }
-        } catch (cookieError) {
-          console.error("Error accessing cookies after refresh:", cookieError);
-        }
-        
-        return api(originalRequest);
-      } catch (refreshError) {
-        console.error("Token refresh failed:", refreshError);
-        processQueue(refreshError);
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
-      }
-    }
-
     return Promise.reject(error);
   }
 );

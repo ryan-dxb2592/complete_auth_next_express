@@ -8,7 +8,7 @@ import { getSessionByUserId } from "@/helpers/dbCalls/session";
 
 export const authMiddleware = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
@@ -24,6 +24,8 @@ export const authMiddleware = async (
 
     // Get session from database
     const existingSession = await getSessionByUserId(decoded.userId);
+
+    console.log("Existing session", existingSession);
 
     if (!existingSession) {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);

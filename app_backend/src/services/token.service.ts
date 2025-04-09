@@ -41,7 +41,7 @@ export const generateTokens = (
     },
     JWT_ACCESS_TOKEN_SECRET,
     {
-      expiresIn: "5m",
+      expiresIn: "1m",
       algorithm: "HS256",
     }
   );
