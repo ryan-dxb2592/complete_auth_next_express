@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 // Define types for the fetch options
 type FetchOptions = RequestInit & {
   params?: Record<string, string>;
-  requiresAuth?: boolean;
+  noRedirect?: boolean; // Option to disable automatic redirect on 401
 };
 
 // Define the response type
@@ -17,6 +17,25 @@ type FetchResponse<T> = {
 
 // Define a type for request body data
 type RequestData = Record<string, unknown> | string | number | boolean | null | undefined;
+
+// Detect if code is running on server or client
+const isServer = typeof window === 'undefined';
+
+// Helper function to get the token
+const getAccessToken = async () => {
+  if (isServer) {
+    const cookieStore = await cookies();
+    return cookieStore.get("accessToken")?.value;
+  } else {
+    // Client-side token extraction
+    const cookies = document.cookie.split(';');
+    const accessTokenCookie = cookies.find(cookie => cookie.trim().startsWith('accessToken='));
+    if (accessTokenCookie) {
+      return accessTokenCookie.split('=')[1].trim();
+    }
+    return undefined;
+  }
+};
 
 /**
  * A wrapper around the fetch API that handles common patterns like:
@@ -35,13 +54,13 @@ export async function fetchWrapper<T>(
 ): Promise<FetchResponse<T>> {
   const {
     params,
-    requiresAuth = true,
     headers = {},
+    noRedirect = false,
     ...restOptions
   } = options;
 
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get("accessToken")?.value;
+  // Get the access token
+  const accessToken = await getAccessToken();
 
   // Construct the full URL with query parameters if provided
   let url = endpoint.startsWith('http') 
@@ -56,15 +75,20 @@ export async function fetchWrapper<T>(
   // Prepare headers
   const requestHeaders: HeadersInit = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${accessToken}`,
     ...headers,
   };
+  
+  // Only add Authorization header if we have a token
+  if (accessToken) {
+    Object.assign(requestHeaders, { 'Authorization': `Bearer ${accessToken}` });
+  }
 
   // Add credentials to include cookies
   const fetchOptions: RequestInit = {
     ...restOptions,
     headers: requestHeaders,
     credentials: 'include',
+    cache: 'no-store',
   };
 
   try {
@@ -76,22 +100,44 @@ export async function fetchWrapper<T>(
       return { data: null, error: null, status: response.status, response };
     }
 
+    // If we get a 401 Unauthorized
+    if (response.status === 401 && !noRedirect) {
+      // Handle based on client/server
+      if (isServer) {
+        // Server-side handling - return an error object that indicates redirection is needed
+        // Don't attempt to redirect directly in a data fetching function
+        return {
+          data: null,
+          error: new Error('Unauthorized - Redirect needed'),
+          status: response.status,
+          response,
+        };
+      } else {
+        // Client-side handling
+        // Get the current path for redirect after login
+        const currentPath = window.location.pathname;
+        
+        // Clear cookies
+        document.cookie = 'accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        document.cookie = 'refreshToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        
+        // Redirect to login with returnUrl parameter
+        window.location.href = `/auth/signin?returnUrl=${encodeURIComponent(currentPath)}`;
+      }
+      
+      return {
+        data: null,
+        error: new Error('Unauthorized - Please login'),
+        status: response.status,
+        response,
+      };
+    }
+
     // Parse the JSON response
     const data = await response.json();
 
     // Check if the response was successful
     if (!response.ok) {
-      // Handle specific error cases
-      if (response.status === 401 && requiresAuth) {
-        // Instead of throwing, return the error in the structured response
-        return {
-          data: null,
-          error: new Error('Unauthorized'),
-          status: response.status,
-          response,
-        };
-      }
-      
       // Return the error with the response data
       return {
         data: null,

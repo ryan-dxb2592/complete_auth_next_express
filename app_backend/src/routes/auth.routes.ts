@@ -14,6 +14,7 @@ import {
   toggleTwoFactor,
   verifyTwoFactor,
   googleAuth,
+  verifyAuth,
 } from "@/controllers/authControllers";
 
 import { getMeController } from "@/controllers/userControllers";
@@ -50,6 +51,7 @@ router.post(
 );
 router.post("/toggle-two-factor", authMiddleware, toggleTwoFactor);
 router.post("/verify-two-factor", authMiddleware, verifyTwoFactor);
+router.get("/verify", authMiddleware, verifyAuth);
 export default router;
 
 router.post("/google-auth", googleAuth);

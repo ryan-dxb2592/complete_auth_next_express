@@ -10,6 +10,7 @@ export const API_ENDPOINT = process.env.NEXT_PUBLIC_API_URL || 'http://localhost
 export const AUTH_ENDPOINTS = {
   LOGIN: '/api/v1/auth/login',
   REGISTER: '/api/v1/auth/register',
+  VERIFY_AUTH: '/api/v1/auth/verify',
   REFRESH_TOKEN: '/api/v1/auth/refresh-token',
   LOGOUT: '/api/v1/auth/logout',
   VERIFY_EMAIL: '/api/v1/auth/verify-email',

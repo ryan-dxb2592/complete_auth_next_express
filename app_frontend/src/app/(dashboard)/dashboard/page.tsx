@@ -30,7 +30,7 @@ const DashboardPage = async () => {
           <ManualRefreshButton />
           
           {/* Client-side cookie debugging */}
-          <CookieDebugger />
+          {/* <CookieDebugger /> */}
         </div>
    
     </div>
