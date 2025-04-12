@@ -15,8 +15,8 @@ export const decryptAccessToken = async () => {
 
     const decoded = await decodeJwt(accessToken)
 
-    // check if the token is expired
-    const isExpired = decoded?.exp && decoded.exp < Date.now() / 1000
+    // check if the token is expired 10 seconds before the expiration time
+    const isExpired = decoded?.exp && decoded.exp < (Date.now() / 1000) - 10
     console.log("Access Token isExpired", isExpired)
 
     return { decoded, isExpired, accessToken }
@@ -31,8 +31,8 @@ export const decryptRefreshToken = async () => {
 
     const decoded = await decodeJwt(refreshToken)
 
-    // check if token is expired
-    const isExpired = decoded?.exp && decoded.exp < Date.now() / 1000
+    // check if token is expired 10 seconds before the expiration time
+    const isExpired = decoded?.exp && decoded.exp < (Date.now() / 1000) - 10
     console.log("Refresh Token isExpired", isExpired)
 
     return { decoded, isExpired, refreshToken }

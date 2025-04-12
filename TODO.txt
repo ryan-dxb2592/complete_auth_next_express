@@ -6,3 +6,9 @@
 
 
 --- hAV TO WORK ON MANAGING THE COOKIES FOR google AUTH IN BOTH FRONT AND BACKEND
+
+
+
+https://github.com/urboifox/nextjs-refreshtoken-demo/blob/main/src/middleware.ts
+
+Lets try this 

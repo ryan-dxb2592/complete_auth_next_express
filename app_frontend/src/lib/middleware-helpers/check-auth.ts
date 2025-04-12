@@ -48,9 +48,16 @@ export async function checkAuth() {
     console.log("Successfully refreshed tokens")
     await setCookies(refreshTokenResult.response)
     
+
+    // Send access token to the client
+    const cookieHeaders = refreshTokenResult.response.headers.getSetCookie();
+
+    const accessToken = cookieHeaders?.find(header => header.startsWith('accessToken='))?.split(';')[0].split('=')[1]
+
     return {
         isAuthenticated: true,
-        status: 'tokens_refreshed'
+        status: 'tokens_refreshed',
+        accessToken: accessToken
     }
 }
 

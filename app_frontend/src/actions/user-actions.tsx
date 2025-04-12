@@ -1,5 +1,6 @@
 import { get } from "../lib/fetch-wrapper";
 import { API_ENDPOINT } from "../constants";
+import { headers } from "next/headers";
 
 // Define the User type
 export interface User {
@@ -16,6 +17,8 @@ export interface User {
  */
 export const getMe = async (): Promise<User | null> => {
   'use server'
+
+  
   try {
     // Use the fetch wrapper to get the user data with noRedirect option
     // We'll handle the redirect ourselves here instead
@@ -33,6 +36,5 @@ export const getMe = async (): Promise<User | null> => {
     return null;
   }
 };
-
 
 

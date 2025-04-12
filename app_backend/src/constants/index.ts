@@ -1,6 +1,11 @@
 import dotenv from "dotenv";
+import path from "path";
 
-dotenv.config();
+// Load environment variables from .env file
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+
+// Log the GOOGLE_CLIENT_ID to debug
+console.log('Loading constants. GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
 
 export const HTTP_STATUS = {
   OK: 200,

@@ -1,5 +1,5 @@
 import { API_ENDPOINT } from '../constants';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
 // Define types for the fetch options
 type FetchOptions = RequestInit & {
@@ -13,7 +13,7 @@ type FetchResponse<T> = {
   error: Error | null;
   status: number;
   response?: Response; // Add the original Response object
-};
+} | Response;
 
 // Define a type for request body data
 type RequestData = Record<string, unknown> | string | number | boolean | null | undefined;
@@ -23,6 +23,14 @@ const isServer = typeof window === 'undefined';
 
 // Helper function to get the token
 const getAccessToken = async () => {
+  const refreshedAceessToken = (await headers()).get("set-cookie")
+
+  console.log("Refreshed Access Token:", refreshedAceessToken);
+
+  if (refreshedAceessToken) {
+    return refreshedAceessToken.split('accessToken=')[1].split(';')[0].trim();
+  }
+
   if (isServer) {
     const cookieStore = await cookies();
     return cookieStore.get("accessToken")?.value;
@@ -77,11 +85,16 @@ export async function fetchWrapper<T>(
     'Content-Type': 'application/json',
     ...headers,
   };
+
+  console.log("Request Headers:", requestHeaders);
+
+
   
   // Only add Authorization header if we have a token
   if (accessToken) {
     Object.assign(requestHeaders, { 'Authorization': `Bearer ${accessToken}` });
   }
+
 
   // Add credentials to include cookies
   const fetchOptions: RequestInit = {
@@ -93,8 +106,11 @@ export async function fetchWrapper<T>(
 
   try {
     // Make the fetch request
+
+
     const response = await fetch(url, fetchOptions);
     
+
     // Handle different response statuses
     if (response.status === 204) {
       return { data: null, error: null, status: response.status, response };
@@ -106,12 +122,9 @@ export async function fetchWrapper<T>(
       if (isServer) {
         // Server-side handling - return an error object that indicates redirection is needed
         // Don't attempt to redirect directly in a data fetching function
-        return {
-          data: null,
-          error: new Error('Unauthorized - Redirect needed'),
-          status: response.status,
-          response,
-        };
+      
+        //  Create a new error object that indicates redirection is needed with status code 401
+        throw new Error('Unauthorized - Please login');
       } else {
         // Client-side handling
         // Get the current path for redirect after login
